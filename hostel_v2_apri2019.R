@@ -107,22 +107,182 @@ linkGet <- function (url) {
 }
 
 cityPgLinks <- apply(data.frame(mainPgDF$mainPgCityLink), 1, linkGet)
-for(i in cityPgLinks){
-  print(getIndex(i))
+cityPgLinks <- 
+  cityPgLinks %>% 
+  unlist()
+cityPgLinks <- data.frame(cityPgLinks)
+cityPgLinks$City <- c("Tokyo", "Tokyo", "Tokyo", "Tokyo", "Tokyo",
+                    "Kyoto", "Kyoto", "Kyoto", "Kyoto", 
+                    "Osaka", "Osaka", "Osaka", "Osaka",
+                    "Hiroshima", "Fukuoka")
+names(cityPgLinks) <- c("Link", "City")
+
+if(debugOn==TRUE) {
+  print("cityPgLinks contents")
+  print(cityPgLinks)
 }
-# cityPgLinks <- 
-#   link.list.for.each.city %>% 
-#   unlist()
-# cityPgLinks <- data.frame(cityPgLinks)
 
-# if(debugOn==TRUE) {
-#   print("cityPgLinks contents")
-#   print(cityPgLinks)
-# }
+# -------------------------------------- 
+# get information from each hostel
+# --------------------------------------
+
+hostelScraping <- function (url) {
+  
+  # retrieve page link
+  page <- read_html(as.character(url))  
+  
+  #retrieve array of hostel names
+  hostelName <- 
+    page %>% 
+    html_nodes("div.row") %>% 
+    html_nodes("div.resultcontainer") %>% 
+    html_nodes("div#fabResultsContainer") %>% 
+    html_nodes("div.fabresult") %>% 
+    html_nodes("div.resultheader") %>% 
+    html_nodes("h2") %>% 
+    html_text()
+  
+  #retrieve array of hostel links per hostel
+  hostelLink <- 
+    page %>% 
+    html_nodes("div.row") %>% 
+    html_nodes("div.resultcontainer") %>% 
+    html_nodes("div#fabResultsContainer") %>% 
+    html_nodes("div.fabresult") %>% 
+    html_nodes("div.resultheader") %>% 
+    html_nodes("h2") %>% 
+    html_nodes("a") %>% 
+    html_attr("href")
+  
+  # Rating summary score
+  #retrieve array of hostel overall ratings
+  rating.summary <- 
+    page %>% 
+    html_nodes("div.inner-wrap") %>% 
+    html_nodes("div.page-contents") %>% 
+    html_nodes("div.contentbackground") %>% 
+    html_nodes("div.row") %>% 
+    html_nodes("div.resultcontainer") %>% 
+    html_nodes("div.fabresult") %>% 
+    html_nodes("div.fabresult-details-rating") %>% 
+    html_nodes("div.hwta-rating-container") %>% 
+    html_text()
+  rating.summary <- 
+    rating.summary %>% 
+    unlist()
+  
+  rating.summary <- data.frame(rating.summary)
+  rating.summary$rating.summary <- as.character(rating.summary$rating.summary) 
+  rating.summary$rating.summary <- 
+    rating.summary$rating.summary %>% 
+    str_remove_all("\n")
+  rating.summary$rating.summary <- 
+    rating.summary$rating.summary %>% 
+    str_remove("\\s")
+  
+  rating.summary$rating.summary <- 
+    rating.summary$rating.summary %>% 
+    str_remove("                                      ")
+  
+  rating.summary$rating.summary <- 
+    rating.summary$rating.summary %>% 
+    str_sub(1, 5)
+  
+  rating.summary$rating.summary <- as.numeric(rating.summary$rating.summary)
+  
+  overall.score <-
+    page %>%
+    html_nodes("div.row") %>%
+    html_nodes("div.resultcontainer") %>%
+    html_nodes("div#fabResultsContainer") %>%
+    html_nodes("div.fabresult") %>%
+    html_nodes("div.resultheader") %>%
+    html_nodes("div.fabresult-details-rating") %>%
+    html_nodes("div.hwta-rating-container") %>%
+    html_nodes("div.hwta-rating-summary") %>%
+    html_nodes("a.hwta-rating-score") %>%
+    html_text()
+  
+  rating_band <-
+    page %>%
+    html_nodes("div.row") %>%
+    html_nodes("div.resultcontainer") %>%
+    html_nodes("div#fabResultsContainer") %>%
+    html_nodes("div.fabresult") %>%
+    html_nodes("div.resultheader") %>%
+    html_nodes("div.fabresult-details-rating") %>%
+    html_nodes("div.hwta-rating-container") %>%
+    html_nodes("div.hwta-rating-summary") %>%
+    html_nodes("div.hwta-rating-info") %>%
+    html_nodes("span") %>%
+    html_text()
+
+   review_num <-
+    page %>%
+    html_nodes("div.row") %>%
+    html_nodes("div.resultcontainer") %>%
+    html_nodes("div#fabResultsContainer") %>%
+    html_nodes("div.fabresult") %>%
+    html_nodes("div.resultheader") %>%
+    html_nodes("div.fabresult-details-rating") %>%
+    html_nodes("div.hwta-rating-container") %>%
+    html_nodes("div.hwta-rating-summary") %>%
+    html_nodes("div.hwta-rating-info") %>%
+    html_nodes("a.hwta-rating-counter") %>%
+    html_text()
+
+  price.from <- 
+    page %>% 
+    html_nodes("div.row") %>% 
+    html_nodes("div.resultcontainer") %>% 
+    html_nodes("div#fabResultsContainer") %>% 
+    html_nodes("div.fabresult") %>% 
+    html_nodes("div.resultheader") %>% 
+    html_nodes("div.fabresult-prices") %>% 
+    html_nodes("span.price") %>% 
+    html_nodes("a") %>% 
+    html_text()
+  
+  location <- 
+    page %>% 
+    html_nodes("div.row") %>% 
+    html_nodes("div.resultcontainer") %>% 
+    html_nodes("div#fabResultsContainer") %>% 
+    html_nodes("div.fabresult") %>% 
+    html_nodes("div.resultheader") %>% 
+    html_nodes("div.addressline") %>% 
+    html_text()
+  
+  data.frame(hostelName, hostelLink, 
+             #overall.score, rating_band, review_num, 
+             price.from, location, rating.summary)
+}
+
+scrapeResult <- apply(data.frame(cityPgLinks$Link), 1, hostelScraping)
+scrapeResult <- do.call(rbind.data.frame, scrapeResult)
+
+# Clean dataset
+scrapeResult$location <- 
+  as.character(scrapeResult$location) %>% 
+  str_remove("  - Show on Map\n        ")
+scrapeResult$location <- 
+  scrapeResult$location %>% 
+  str_remove("\n             ")
 
 
-# cityPgLinks <- 
-#   cityPageLinks %>% 
-#   unlist()
-# link.list <- data.frame(cityPgLinks)
+scrapeResult <- 
+  scrapeResult %>% 
+  mutate(City = as.character(hostelLink))
+scrapeResult$City <- 
+  scrapeResult$City %>% 
+  str_remove("https://www.hostelworld.com/hosteldetails.php/")
+scrapeResult <- 
+  scrapeResult %>% 
+  separate(City, sep = "/",
+           into = c("Name", "City", "num")) %>% 
+  select(hostelName, City, price.from, location, rating.summary, hostelLink)
+
+#export hostel list csv
+write.csv(scrapeResult,"Hostel_list.csv")
+
 print("finished scraping ty")
