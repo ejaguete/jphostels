@@ -22,15 +22,13 @@ debugOn <- FALSE
 # VAR: homepage for japan hostels
 # -------------------------------------- 
 # used to scrape top 5 cities & their links
-jpHostelHomePg <- read_html("https://www.hostelworld.com/hostels/Japan")
+homePage <- read_html("https://www.hostelworld.com/hostels/Japan")
 
 # --------------------------------------
-# scrape city names from jpHostelLink
+# VAR: scrape city names from jpHostelLink
 # -------------------------------------- 
-
-# stores: 1d vector, len n of city names
-homePgCityNames <- 
-  jpHostelHomePg %>% 
+homePageCityNames <- 
+  homePage %>% 
   html_nodes("div.contentbackground") %>% 
   html_nodes("div.small-12") %>% 
   html_nodes("div.citysection") %>% 
@@ -39,17 +37,15 @@ homePgCityNames <-
   html_text()
 
 if(debugOn==TRUE) {
-  print("homePgCityNames contents")
-  print(homePgCityNames)
+  print("homePageCityNames contents")
+  print(homePageCityNames)
 }
 
 # -------------------------------------- 
-# scrape city links from jpHostelLink
+# VAR: scrape city links from jpHostelLink
 # -------------------------------------- 
-
-# stores: 1d vector, len n of city links
-homePgCityLinks <- 
-  jpHostelHomePg %>% 
+homePageCityLinks <- 
+  homePage %>% 
   html_nodes("div.contentbackground") %>% 
   html_nodes("div.small-12") %>% 
   html_nodes("div.citysection") %>% 
@@ -60,16 +56,14 @@ homePgCityLinks <-
 
 if(debugOn==TRUE) {
   print("homePgCityLink contents")
-  print(homePgCityLink)
+  print(homePgCityLinks)
 }
 
 # -------------------------------------- 
-# scrape number of hostels in each city from jpHostelLink
+# VAR: scrape number of hostels in each city from jpHostelLink
 # -------------------------------------- 
-
-# stores: 1d vector len 1 of number of hostels
-homePgCityNumHostels <- 
-  jpHostelHomePg %>% 
+homePageCityNumHostels <- 
+  homePage %>% 
   html_nodes("div.contentbackground") %>% 
   html_nodes("div.small-12") %>% 
   html_nodes("div.citysection") %>% 
@@ -78,24 +72,22 @@ homePgCityNumHostels <-
   html_text()
 
 if(debugOn==TRUE) {
-  print("mainPgCitynumHostels contents")
-  print(mainPgCitynumHostels)
+  print("homePageCityNumHostels contents")
+  print(homePageCityNumHostels)
 }
 
 # -------------------------------------- 
 # VAR: store city names, links, hostel num vars in a dataframe
 # -------------------------------------- 
-homePgDF <- data.frame(homePgCityNames, homePgCityLinks, homePgCityNumHostels)
-write.csv(homePgDF,"homePgDF.csv")
+homePageDF <- data.frame(homePageCityNames, homePageCityLinks, homePageCityNumHostels)
+write.csv(homePageDF,"homePageDF.csv")
 
 # -------------------------------------- 
-# get information from each page of each city
-# --------------------------------------
-
-# function to retrieve url of pagination links per city
+# FUNC: retrieve pagination links for each city
 # param: txt url of city link e.g. Tokyo, Osaka, Hiroshima
 # returns: pagination url txt in city link = pg1,2,3... for Tokyo
-pgLinkGet <- function (url) {
+# -------------------------------------- 
+getPaginationLink <- function (url) {
   as.character(url) %>% 
     read_html() %>% 
     html_nodes("ul.pagination") %>% 
@@ -104,39 +96,37 @@ pgLinkGet <- function (url) {
     html_attr("href")
 }
 
-# insert column for city name corresponding to link
+# -------------------------------------- 
+# VAR: store pagination links & add corresponding city
 # eg pg1,2,3 for Tokyo hostels has city = 'Tokyo'
-cityPgLinks <- apply(data.frame(homePgDF$homePgCityLink), 1, pgLinkGet)
-# cityPgLinks <- 
-#   cityPgLinks %>% 
-#   unlist()
-cityPgLinksDF <- data.frame(cityPgLinks %>% unlist())
-cityPgLinksDF$City <- c("Tokyo", "Tokyo", "Tokyo", "Tokyo", "Tokyo",
+# -------------------------------------- 
+cityPageLinks <- apply(data.frame(homePageDF$homePageCityLink), 1, getPaginationLink)
+cityPageLinksDF <- data.frame(cityPgLinks %>% unlist())
+cityPageLinksDF$City <- c("Tokyo", "Tokyo", "Tokyo", "Tokyo", "Tokyo",
                     "Kyoto", "Kyoto", "Kyoto", "Kyoto", 
                     "Osaka", "Osaka", "Osaka", "Osaka",
                     "Hiroshima", "Fukuoka")
 # column labels
-names(cityPgLinksDF) <- c("Link", "City")
+names(cityPageLinksDF) <- c("Link", "City")
 
 if(debugOn==TRUE) {
   print("cityPgLinksDF contents")
   print(cityPgLinksDF)
 }
-write.csv(cityPgLinksDF,"cityPgLinksDF.csv")
+write.csv(cityPageLinksDF,"cityPageLinksDF.csv")
 
 # -------------------------------------- 
-# get name & link from each hostel
-# --------------------------------------
-
-# new scrape function cause idk how the old one works
-# param url: 
+# FUNC: for each pagination link, scrape hostel names and their links
+# param: url of pagin. link
+# returns: DF containing names and links of hostels
+# -------------------------------------- 
 scrapeHostelLink <- function(url) {
   #convert to url to scrape
-  pg <- read_html(as.character(url))
+  link <- read_html(as.character(url))
   
   # scrape hostel name from url
   hostelName <-
-    pg %>%
+    link %>%
     html_nodes("div.row") %>% 
     html_nodes("div.resultcontainer") %>% 
     html_nodes("div#fabResultsContainer") %>% 
@@ -147,7 +137,7 @@ scrapeHostelLink <- function(url) {
   
   #scrape hostel page link
   hostelLink <- 
-    pg %>% 
+    link %>% 
     html_nodes("div.row") %>% 
     html_nodes("div.resultcontainer") %>% 
     html_nodes("div#fabResultsContainer") %>% 
@@ -157,34 +147,110 @@ scrapeHostelLink <- function(url) {
     html_nodes("a") %>% 
     html_attr("href")
   
-  # hostelOverallRating <-
-  #   hostelLink %>%
-  #   html_nodes("div.row") %>%
-  #   html_nodes("section.small-12") %>%
-  #   #html_attr("name=ms-rating") %>%
-  #   html_nodes("div.ms-rating-summary-block") %>%
-  #   html_nodes("div.rating-summary") %>%
-  #   html_nodes("div.score") %>%
-  #   html.text()
+  minPrice <- 
+    link %>% 
+    html_nodes("div.row") %>% 
+    html_nodes("div.resultcontainer") %>% 
+    html_nodes("div#fabResultsContainer") %>% 
+    html_nodes("div.fabresult") %>% 
+    html_nodes("div.resultheader") %>% 
+    html_nodes("div.fabresult-prices") %>% 
+    html_nodes("span.price") %>% 
+    html_nodes("a") %>% 
+    html_text()
+  
+  location <- 
+    link %>% 
+    html_nodes("div.row") %>% 
+    html_nodes("div.resultcontainer") %>% 
+    html_nodes("div#fabResultsContainer") %>% 
+    html_nodes("div.fabresult") %>% 
+    html_nodes("div.resultheader") %>% 
+    html_nodes("div.addressline") %>% 
+    html_text()
+  location <- as.character(location) %>% str_remove("- Show on Map")
+  location <- location %>% str_remove_all("\\n")
 
   # return dataframe object containing the scraped attributes
-  data.frame(hostelName,hostelLink)
+  data.frame(hostelName,hostelLink, minPrice, location)
 }
 
-#print(scrapeHostelLink(cityPgLinksDF$Link[1]))
-
-
+# -------------------------------------- 
+# FUNC: scrape info from individual hostel pages
+# -------------------------------------- 
 scrapeHostelInfo <- function(url) {
-  #convert to url to scrape
-  pg <- read_html(as.character(url))
+  link <- read_html(as.character(url))
+  
+  name <- 
+    link %>% 
+    html_nodes("div.ms-content") %>% 
+    html_nodes('[name=ms-hero]') %>% 
+    html_nodes("div.jumbotron") %>% 
+    html_nodes("div.row") %>% 
+    html_nodes("div.small-12") %>% 
+    html_nodes("div.content") %>% 
+    html_nodes("h1") %>% 
+    html_text()
+  
+  ratingOverall <-
+    link %>%
+    html_nodes("div.row") %>%
+    html_nodes("section.small-12") %>%
+    html_nodes("div.ms-rating-summary-block") %>%
+    html_nodes("div.rating-summary") %>%
+    html_nodes("div.score") %>%
+    html_text()
+  #clean out white spaces
+  ratingOverall <- ratingOverall %>% str_remove_all("\\n")
+  ratingOverall <- ratingOverall %>% str_remove_all("\\s")
+
+   ratingKeyword <-
+     link %>%
+     html_nodes("div.row") %>%
+     html_nodes("section.small-12") %>%
+     html_nodes("div.ms-rating-summary-block") %>%
+     html_nodes("div.rating-summary") %>%
+     html_nodes("div.info") %>%
+     html_nodes("p.keyword") %>%
+     html_text()
+
+   totalReviews <-
+     link %>%
+     html_nodes("div.row") %>%
+     html_nodes("section.small-12") %>%
+     html_nodes("div.ms-rating-summary-block") %>%
+     html_nodes("div.rating-summary") %>%
+     html_nodes("div.info") %>%
+     html_nodes("a.counter") %>%
+     html_nodes("span") %>%
+     html_text()
+   
+   ratingBreakdown <-
+     link %>%
+     html_nodes("div.row") %>%
+     html_nodes("section.small-12") %>%
+     html_nodes("ul.rating-breakdown") %>%
+     html_nodes("li.small-12") %>%
+     html_nodes("p.rating-label") %>%
+     html_text()
+   
+   data.frame(name, ratingOverall, ratingKeyword, totalReviews, ratingBreakdown)
 }
 
+# -------------------------------------- 
+# VAR: for each link in cityPgLinksDF, apply function scrapeHostelPg
+# stored in a dataframe
+# -------------------------------------- 
 # for each link in cityPgLinksDF, apply function scrapeHostelPg
 scrapedData <- apply(data.frame(cityPgLinksDF$Link),1,scrapeHostelLink)
 scrapedData <- do.call(rbind.data.frame, scrapedData)
 write.csv(scrapedData,"scrapedData.csv")
 
-print(scrapedData$hostelLink[1]) #print ONE LINK IT WORKS!!!
+print(scrapeHostelInfo(scrapedData$hostelLink[1]))
+write.csv(scrapeHostelInfo(scrapedData$hostelLink[1]),
+          "scrapedHotelInfo.csv")
+
+
 # -------------------------------------- 
 # STOP HERE IGNORE STUFF AFTER THIS
 # --------------------------------------
