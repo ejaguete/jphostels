@@ -285,7 +285,7 @@ scrapeHostelInfo <- function(url) {
     ratingBreakdown$Score <- ratingBreakdown$Score/10 # ratings had no decimals so converted them eg 95 -> 9.5
     ratingBreakdown <- ratingBreakdown %>% spread(Type, Score) # pivot the table
   } else {
-    print("oh no")
+    #print("oh no")
     #columnNames <- c("atmosphere", "cleanliness", "facilities", "location", "security", "staff", "valueformoney")
     
     ratingBreakdown <- data.frame(atmosphere=NA, cleanliness=NA,facilities=NA, location=NA,security=NA, staff=NA, valueformoney=NA) 
