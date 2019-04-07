@@ -135,7 +135,7 @@ scrapeHostelLink <- function(url) {
     html_nodes("div.fabresult") %>% 
     html_nodes("div.resultheader") %>% 
     html_nodes("h2") %>% 
-    html_text()
+    html_text(trim=TRUE)
   
   #scrape hostel page link
   hostelLink <- 
@@ -159,7 +159,7 @@ scrapeHostelLink <- function(url) {
     html_nodes("div.fabresult") %>% 
     html_nodes("div.fabresult-details-rating") %>% 
     html_nodes("div.hwta-rating-container") %>% 
-    html_text()
+    html_text(trim=TRUE)
   ratingOverall <- 
     ratingOverall %>% 
     unlist()
@@ -192,7 +192,7 @@ scrapeHostelLink <- function(url) {
     html_nodes("div.fabresult-prices") %>% 
     html_nodes("span.price") %>% 
     html_nodes("a") %>% 
-    html_text()
+    html_text(trim=TRUE)
   
   location <- 
     link %>% 
@@ -202,7 +202,7 @@ scrapeHostelLink <- function(url) {
     html_nodes("div.fabresult") %>% 
     html_nodes("div.resultheader") %>% 
     html_nodes("div.addressline") %>% 
-    html_text()
+    html_text(trim=TRUE)
   location <- as.character(location) %>% str_remove("- Show on Map")
   location <- location %>% str_remove_all("\\n")
 
@@ -235,9 +235,8 @@ scrapeHostelInfo <- function(url) {
     html_nodes("div.small-12") %>% 
     html_nodes("div.content") %>% 
     html_nodes("h1") %>% 
-    html_text()
-  name <- name %>% str_remove_all("\\n")
-  
+    html_text(trim=TRUE)
+
   ratingOverall <-
     link %>%
     html_nodes("div.row") %>%
@@ -245,10 +244,8 @@ scrapeHostelInfo <- function(url) {
     html_nodes("div.ms-rating-summary-block") %>%
     html_nodes("div.rating-summary") %>%
     html_nodes("div.score") %>%
-    html_text()
-  #clean out white spaces
-  ratingOverall <- ratingOverall %>% str_remove_all("\\n") %>% str_remove_all("\\s")
-
+    html_text(trim=TRUE)
+  
    ratingKeyword <-
      link %>%
      html_nodes("div.row") %>%
@@ -257,8 +254,8 @@ scrapeHostelInfo <- function(url) {
      html_nodes("div.rating-summary") %>%
      html_nodes("div.info") %>%
      html_nodes("p.keyword") %>%
-     html_text()
-
+     html_text(trim=TRUE)
+   
    totalReviews <-
      link %>%
      html_nodes("div.row") %>%
@@ -268,7 +265,7 @@ scrapeHostelInfo <- function(url) {
      html_nodes("div.info") %>%
      html_nodes("a.counter") %>%
      html_nodes("span") %>%
-     html_text()
+     html_text(trim=TRUE)
 
    rbk <-
      link %>%
@@ -277,28 +274,34 @@ scrapeHostelInfo <- function(url) {
      html_nodes("ul.rating-breakdown") %>%
      html_nodes("li.small-12") %>%
      html_nodes("p.rating-label") %>%
-     html_text()
-
-   temp <- data.frame(rbk)
-   temp$rbk <- as.character(temp$rbk)
-   temp$rbk <- temp$rbk %>% str_remove("\\.") %>% str_to_lower() %>% str_remove_all(" ")
-   temp$rbk <- temp$rbk %>% colsplit("(?<=\\p{L})(?=[\\d+$])", c("Type", "Score"))
-   ratingBreakdown <- data.frame(temp)
-   ratingBreakdown <- ratingBreakdown$ratingBreakdown
-   ratingBreakdown$Score <- ratingBreakdown$Score/10
+     html_text(trim=TRUE) %>% replace(!nzchar(.),NA)
+  if(length(rbk)>0) {
+    temp <- data.frame(rbk) # put into temp df
+    temp$rbk <- as.character(temp$rbk) # convert everything to text
+    temp$rbk <- temp$rbk %>% str_remove("\\.") %>% str_to_lower() %>% str_remove_all(" ") # make values a long string (will fix later)
+    temp$rbk <- temp$rbk %>% colsplit("(?<=\\p{L})(?=[\\d+$])", c("Type", "Score")) # make 2 columns, type and score, then populate with values
+    ratingBreakdown <- data.frame(temp) # make a new df containing those columns
+    ratingBreakdown <- ratingBreakdown$rbk # df has a wrapper around it so get rid of the wrapper
+    ratingBreakdown$Score <- ratingBreakdown$Score/10 # ratings had no decimals so converted them eg 95 -> 9.5
+    ratingBreakdown <- ratingBreakdown %>% spread(Type, Score) # pivot the table
+  } else {
+    print("oh no")
+    #columnNames <- c("atmosphere", "cleanliness", "facilities", "location", "security", "staff", "valueformoney")
+    
+    ratingBreakdown <- data.frame(atmosphere=NA, cleanliness=NA,facilities=NA, location=NA,security=NA, staff=NA, valueformoney=NA) 
+  }
    
-   #ratingBreakdown <- ratingBreakdown %>% spread(Type, Score)
-   print(temp)
-   #data.frame(name, ratingOverall, ratingKeyword, totalReviews, ratingBreakdown)
+   data.frame(name, ratingOverall, ratingKeyword, totalReviews, ratingBreakdown)
 }
 
-scrapeHostelInfo(scrapedLinksDF$Link[1])
+#print(scrapeHostelInfo(scrapedLinksDF$Link[1]))
+#print(scrapeHostelInfo("https://www.hostelworld.com/hosteldetails.php/bnbPost-Town-Shinbashi/Tokyo/293754?dateFrom=2019-04-08&dateTo=2019-04-11&number_of_guests=2"))
 
 filteredHostels <- scrapedLinksDF %>% filter(scrapedLinksDF$OverallRating > 0.0)
 write.csv(filteredHostels, "filteredHostels.csv")
 
 hostelDataset <- apply(data.frame(filteredHostels$Link),1,scrapeHostelInfo)
-hostelDataset <- do.call(rbind, hostelDataset)
+hostelDataset <- do.call(rbind.data.frame, hostelDataset)
 
 #print(scrapeHostelInfo(scrapedData$hostelLink[1]))
 write.csv(hostelDataset, "hostelDataset.csv")
