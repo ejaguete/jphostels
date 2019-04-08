@@ -4,8 +4,9 @@
 #
 # Original script author:  koki25ando @ Github
 # Github: https://github.com/koki25ando/Hostel-Data-Scraping/blob/master/hostel.R
-# Modified/rewritten by ciralili
+# Modified/rewritten by ejaguete @ github
 
+# hi
 
 # *************************************
 # *             SCRIPT                *
