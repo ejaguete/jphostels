@@ -149,6 +149,7 @@ scrapeHostelLink <- function(url) {
     html_nodes("a") %>% 
     html_attr("href")
   
+  #scrape summary rating of hostel
   ratingOverall <- 
     link %>% 
     html_nodes("div.inner-wrap") %>% 
@@ -160,26 +161,15 @@ scrapeHostelLink <- function(url) {
     html_nodes("div.fabresult-details-rating") %>% 
     html_nodes("div.hwta-rating-container") %>% 
     html_text(trim=TRUE)
-  ratingOverall <- 
-    ratingOverall %>% 
-    unlist()
+  #clean
+  ratingOverall <- ratingOverall %>%  unlist()
   ratingOverall <- data.frame(ratingOverall)
   ratingOverall$ratingOverall <- as.character(ratingOverall$ratingOverall)
-  ratingOverall$ratingOverall <- 
-    ratingOverall$ratingOverall %>% 
-    str_remove_all("\n")
-  ratingOverall$ratingOverall <- 
-    ratingOverall$ratingOverall %>% 
-    str_remove("\\s")
-  
-  ratingOverall$ratingOverall <- 
-    ratingOverall$ratingOverall %>% 
-    str_remove("                                      ")
-  
-  ratingOverall$ratingOverall <- 
-    ratingOverall$ratingOverall %>% 
+  ratingOverall$ratingOverall <- ratingOverall$ratingOverall %>% 
+    str_remove_all("\n") %>%
+    str_remove("\\s") %>%
+    #str_remove("                                      ") %>%
     str_sub(1, 5)
-  
   ratingOverall$ratingOverall <- as.numeric(ratingOverall$ratingOverall)
   
   minPrice <- 
@@ -245,7 +235,7 @@ scrapeHostelInfo <- function(url) {
     html_nodes("div.rating-summary") %>%
     html_nodes("div.score") %>%
     html_text(trim=TRUE)
-  
+
    ratingKeyword <-
      link %>%
      html_nodes("div.row") %>%
@@ -274,7 +264,8 @@ scrapeHostelInfo <- function(url) {
      html_nodes("ul.rating-breakdown") %>%
      html_nodes("li.small-12") %>%
      html_nodes("p.rating-label") %>%
-     html_text(trim=TRUE) %>% replace(!nzchar(.),NA)
+     html_text(trim=TRUE) #%>% replace(!nzchar(.),NA)
+   
   if(length(rbk)>0) {
     temp <- data.frame(rbk) # put into temp df
     temp$rbk <- as.character(temp$rbk) # convert everything to text
@@ -285,25 +276,20 @@ scrapeHostelInfo <- function(url) {
     ratingBreakdown$Score <- ratingBreakdown$Score/10 # ratings had no decimals so converted them eg 95 -> 9.5
     ratingBreakdown <- ratingBreakdown %>% spread(Type, Score) # pivot the table
   } else {
-    #print("oh no")
-    #columnNames <- c("atmosphere", "cleanliness", "facilities", "location", "security", "staff", "valueformoney")
-    
     ratingBreakdown <- data.frame(atmosphere=NA, cleanliness=NA,facilities=NA, location=NA,security=NA, staff=NA, valueformoney=NA) 
   }
-   
-   data.frame(name, ratingOverall, ratingKeyword, totalReviews, ratingBreakdown)
+   df <- data.frame(name, ratingOverall, ratingKeyword, totalReviews, ratingBreakdown)
+   print(df) # so i can see its doing things :B
+   return(df)
 }
 
-#print(scrapeHostelInfo(scrapedLinksDF$Link[1]))
-#print(scrapeHostelInfo("https://www.hostelworld.com/hosteldetails.php/bnbPost-Town-Shinbashi/Tokyo/293754?dateFrom=2019-04-08&dateTo=2019-04-11&number_of_guests=2"))
-
+# filter out hostels with no rating
 filteredHostels <- scrapedLinksDF %>% filter(scrapedLinksDF$OverallRating > 0.0)
 write.csv(filteredHostels, "filteredHostels.csv")
 
 hostelDataset <- apply(data.frame(filteredHostels$Link),1,scrapeHostelInfo)
 hostelDataset <- do.call(rbind.data.frame, hostelDataset)
 
-#print(scrapeHostelInfo(scrapedData$hostelLink[1]))
 write.csv(hostelDataset, "hostelDataset.csv")
 
 print("finished scraping ty")
