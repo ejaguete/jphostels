@@ -147,12 +147,12 @@ scrapeHostelLink <- function(url) {
   ratingOverall <- ratingOverall %>%  unlist()
   ratingOverall <- data.frame(ratingOverall)
   ratingOverall$ratingOverall <- as.character(ratingOverall$ratingOverall)
-  # ratingOverall$ratingOverall <- ratingOverall$ratingOverall %>% 
-  #   str_remove_all("\n") %>%
-  #   str_remove("\\s") %>%
-  #   #str_remove("                                      ") %>%
-  #   str_sub(1, 5)
-  # ratingOverall$ratingOverall <- as.numeric(ratingOverall$ratingOverall)
+  ratingOverall$ratingOverall <- ratingOverall$ratingOverall %>%
+    str_remove_all("\n") %>%
+    str_remove("\\s") %>%
+    #str_remove("                                      ") %>%
+    str_sub(1, 5)
+  ratingOverall$ratingOverall <- as.numeric(ratingOverall$ratingOverall)
   
   minPrice <- 
     link %>% 
@@ -248,8 +248,7 @@ scrapeHostelInfo <- function(url) {
      html_nodes("ul.rating-breakdown") %>%
      html_nodes("li.small-12") %>%
      html_nodes("p.rating-label") %>%
-     html_text(trim=TRUE) #%>% re
-   place(!nzchar(.),NA)
+     html_text(trim=TRUE) #%>% replace(!nzchar(.),NA)
    
   if(length(rbk)>0) {
     temp <- data.frame(rbk) # put into temp df
