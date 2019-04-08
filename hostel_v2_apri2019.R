@@ -5,19 +5,15 @@
 # Original script author:  koki25ando @ Github
 # Github: https://github.com/koki25ando/Hostel-Data-Scraping/blob/master/hostel.R
 # Modified/rewritten by ejaguete @ github
-
-# hi
+# Github: https://github.com/ejaguete/jphostel
 
 # *************************************
 # *             SCRIPT                *
 # *************************************
 
 # install and load packages as needed
-pkgNames <- c("magrittr","dplyr","tidyverse","rvest","reshape2")
+pkgNames <- c("magrittr","dplyr","tidyverse","rvest","reshape2", "ggmap")
 lapply(pkgNames, require, character.only = TRUE)
-
-#debug toggle
-debugOn <- FALSE
 
 # -------------------------------------- 
 # VAR: homepage for japan hostels
@@ -37,11 +33,6 @@ homePageCityNames <-
   html_nodes("h2") %>% 
   html_text()
 
-if(debugOn==TRUE) {
-  print("homePageCityNames contents")
-  print(homePageCityNames)
-}
-
 # -------------------------------------- 
 # VAR: scrape city links from jpHostelLink
 # -------------------------------------- 
@@ -55,11 +46,6 @@ homePageCityLinks <-
   html_nodes("a") %>% 
   html_attr("href")
 
-if(debugOn==TRUE) {
-  print("homePgCityLink contents")
-  print(homePgCityLinks)
-}
-
 # -------------------------------------- 
 # VAR: scrape number of hostels in each city from jpHostelLink
 # -------------------------------------- 
@@ -71,11 +57,6 @@ homePageCityNumHostels <-
   html_nodes("div.cityresults_details") %>% 
   html_nodes("span.propnumber") %>% 
   html_text()
-
-if(debugOn==TRUE) {
-  print("homePageCityNumHostels contents")
-  print(homePageCityNumHostels)
-}
 
 # -------------------------------------- 
 # VAR: store city names, links, hostel num vars in a dataframe
@@ -213,6 +194,8 @@ write.csv(scrapedLinksDF,"scrapedLinks.csv")
 
 # -------------------------------------- 
 # FUNC: scrape info from individual hostel pages
+# param: url of hostel
+# returns: df containing name, overall rating, rating keyword, num total reviews, rating breakdown
 # -------------------------------------- 
 scrapeHostelInfo <- function(url) {
   link <- read_html(as.character(url))
@@ -292,5 +275,38 @@ hostelDataset <- apply(data.frame(filteredHostels$Link),1,scrapeHostelInfo)
 hostelDataset <- do.call(rbind.data.frame, hostelDataset)
 
 write.csv(hostelDataset, "hostelDataset.csv")
+
+# -------------------------------------- 
+# FUNC: scrape individual reviews from each hostel in filteredHostels
+# param: url of hostel
+# returns: df containing ?? idk ideally rating breakdown inside review
+# -------------------------------------- 
+# i was going to flesh this out but im lazy
+scrapeReviews <- function (url) {
+  link <- read_html(as.character(url))
+  
+  totalReviews <-
+    link %>%
+    html_nodes("div.row") %>%
+    html_nodes("section.small-12") %>%
+    html_nodes("div.ms-rating-summary-block") %>%
+    html_nodes("div.rating-summary") %>%
+    html_nodes("div.info") %>%
+    html_nodes("a.counter") %>%
+    html_attr("href")
+}
+
+#print(scrapeReviews("https://www.hostelworld.com/hosteldetails.php/Emblem-Hostel-Nishiarai/Tokyo/102785"))
+
+# grab geolocations of hostels
+scrapeGeolocation <- function (hostel) {
+  hostel <- as.character(hostel)
+  
+  data.frame(hostel, data.frame(geocode(hostel)))
+}
+
+# i cant scrape geolocation until i get a google api :)) so no
+#print(scrapeGeolocation("Emblem Hostel Nishiarai"))
+#hostelLocation <- apply(data.frame(hostelDataset$name),1,scrapeGeolocation)
 
 print("finished scraping ty")
