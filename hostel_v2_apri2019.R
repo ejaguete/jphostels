@@ -117,7 +117,7 @@ scrapeHostelLink <- function(url) {
     html_nodes("div.fabresult") %>% 
     html_nodes("div.resultheader") %>% 
     html_nodes("h2") %>% 
-    html_text(trim=TRUE)
+    html_text()
   
   #scrape hostel page link
   hostelLink <- 
@@ -142,17 +142,17 @@ scrapeHostelLink <- function(url) {
     html_nodes("div.fabresult") %>% 
     html_nodes("div.fabresult-details-rating") %>% 
     html_nodes("div.hwta-rating-container") %>% 
-    html_text(trim=TRUE)
+    html_text()
   #clean
   ratingOverall <- ratingOverall %>%  unlist()
   ratingOverall <- data.frame(ratingOverall)
   ratingOverall$ratingOverall <- as.character(ratingOverall$ratingOverall)
-  ratingOverall$ratingOverall <- ratingOverall$ratingOverall %>% 
-    str_remove_all("\n") %>%
-    str_remove("\\s") %>%
-    #str_remove("                                      ") %>%
-    str_sub(1, 5)
-  ratingOverall$ratingOverall <- as.numeric(ratingOverall$ratingOverall)
+  # ratingOverall$ratingOverall <- ratingOverall$ratingOverall %>% 
+  #   str_remove_all("\n") %>%
+  #   str_remove("\\s") %>%
+  #   #str_remove("                                      ") %>%
+  #   str_sub(1, 5)
+  # ratingOverall$ratingOverall <- as.numeric(ratingOverall$ratingOverall)
   
   minPrice <- 
     link %>% 
@@ -175,8 +175,8 @@ scrapeHostelLink <- function(url) {
     html_nodes("div.resultheader") %>% 
     html_nodes("div.addressline") %>% 
     html_text(trim=TRUE)
-  location <- as.character(location) %>% str_remove("- Show on Map")
-  location <- location %>% str_remove_all("\\n")
+  # location <- as.character(location) %>% str_remove("- Show on Map")
+  # location <- location %>% str_remove_all("\\n")
 
   # return dataframe object containing the scraped attributes
   data.frame(hostelName,hostelLink, ratingOverall, minPrice, location)
@@ -209,7 +209,7 @@ scrapeHostelInfo <- function(url) {
     html_nodes("div.small-12") %>% 
     html_nodes("div.content") %>% 
     html_nodes("h1") %>% 
-    html_text(trim=TRUE)
+    html_text()
 
   ratingOverall <-
     link %>%
@@ -218,7 +218,7 @@ scrapeHostelInfo <- function(url) {
     html_nodes("div.ms-rating-summary-block") %>%
     html_nodes("div.rating-summary") %>%
     html_nodes("div.score") %>%
-    html_text(trim=TRUE)
+    html_text()
 
    ratingKeyword <-
      link %>%
@@ -228,7 +228,7 @@ scrapeHostelInfo <- function(url) {
      html_nodes("div.rating-summary") %>%
      html_nodes("div.info") %>%
      html_nodes("p.keyword") %>%
-     html_text(trim=TRUE)
+     html_text()
    
    totalReviews <-
      link %>%
@@ -239,7 +239,7 @@ scrapeHostelInfo <- function(url) {
      html_nodes("div.info") %>%
      html_nodes("a.counter") %>%
      html_nodes("span") %>%
-     html_text(trim=TRUE)
+     html_text()
 
    rbk <-
      link %>%
@@ -248,7 +248,8 @@ scrapeHostelInfo <- function(url) {
      html_nodes("ul.rating-breakdown") %>%
      html_nodes("li.small-12") %>%
      html_nodes("p.rating-label") %>%
-     html_text(trim=TRUE) #%>% replace(!nzchar(.),NA)
+     html_text(trim=TRUE) #%>% re
+   place(!nzchar(.),NA)
    
   if(length(rbk)>0) {
     temp <- data.frame(rbk) # put into temp df
