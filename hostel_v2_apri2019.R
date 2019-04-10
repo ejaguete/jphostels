@@ -150,9 +150,10 @@ scrapeHostelLink <- function(url) {
   ratingOverall$ratingOverall <- ratingOverall$ratingOverall %>%
     str_remove_all("\n") %>%
     str_remove("\\s") %>%
-    #str_remove("                                      ") %>%
-    str_sub(1, 5)
-  ratingOverall$ratingOverall <- as.numeric(ratingOverall$ratingOverall)
+    str_remove("                                      ") %>%
+    str_sub(1, 5) %>%
+    ratingOverall$ratingOverall <- as.numeric(ratingOverall$ratingOverall)
+  #ratingOverall$ratingOverall <- as.numeric(ratingOverall$ratingOverall)
   
   minPrice <- 
     link %>% 
