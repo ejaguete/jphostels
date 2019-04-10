@@ -12,7 +12,7 @@
 # *************************************
 
 # install and load packages as needed
-pkgNames <- c("magrittr","dplyr","tidyverse","rvest","reshape2", "ggmap")
+pkgNames <- c("dplyr","tidyverse","rvest","reshape2", "ggmap")
 lapply(pkgNames, require, character.only = TRUE)
 
 # -------------------------------------- 
@@ -131,8 +131,8 @@ scrapeHostelLink <- function(url) {
     html_nodes("a") %>% 
     html_attr("href")
   
-  #scrape summary rating of hostel
-  ratingOverall <- 
+  #scrape overall rating of hostel
+  ro <- 
     link %>% 
     html_nodes("div.inner-wrap") %>% 
     html_nodes("div.page-contents") %>% 
@@ -142,17 +142,16 @@ scrapeHostelLink <- function(url) {
     html_nodes("div.fabresult") %>% 
     html_nodes("div.fabresult-details-rating") %>% 
     html_nodes("div.hwta-rating-container") %>% 
-    html_text()
+    html_text(trim=TRUE)
   #clean
-  ratingOverall <- ratingOverall %>%  unlist()
-  ratingOverall <- data.frame(ratingOverall)
-  ratingOverall$ratingOverall <- as.character(ratingOverall$ratingOverall)
-  ratingOverall$ratingOverall <- ratingOverall$ratingOverall %>%
-    str_remove_all("\n") %>%
-    str_remove("\\s") %>%
-    str_remove("                                      ") %>%
-    str_sub(1, 5) %>%
-    ratingOverall$ratingOverall <- as.numeric(ratingOverall$ratingOverall)
+   ro <- ro %>%  unlist()
+   ro <- data.frame(ro)
+   ro$ro <- as.character(ro$ro)
+   ro$ro <- ro$ro %>% str_remove_all("\n") 
+   ro$ro <-  ro$ro %>% str_remove("\\s") #%>%
+  #   str_remove("                                      ") %>%
+   ro$ro <-  ro$ro %>% str_sub(1, 5)
+   ratingOverall <- as.numeric(ro$ro)
   #ratingOverall$ratingOverall <- as.numeric(ratingOverall$ratingOverall)
   
   minPrice <- 
@@ -165,7 +164,7 @@ scrapeHostelLink <- function(url) {
     html_nodes("div.fabresult-prices") %>% 
     html_nodes("span.price") %>% 
     html_nodes("a") %>% 
-    html_text(trim=TRUE)
+    html_text()
   
   location <- 
     link %>% 
@@ -249,7 +248,16 @@ scrapeHostelInfo <- function(url) {
      html_nodes("ul.rating-breakdown") %>%
      html_nodes("li.small-12") %>%
      html_nodes("p.rating-label") %>%
-     html_text(trim=TRUE) #%>% replace(!nzchar(.),NA)
+     html_text(trim=TRUE) %>% replace(!nzchar(.),NA)
+   
+   # temp <- data.frame(rbk) # put into temp df
+   # temp$rbk <- as.character(temp$rbk) # convert everything to text
+   # temp$rbk <- temp$rbk %>% str_remove("\\.") %>% str_to_lower() %>% str_remove_all(" ") # make values a long string (will fix later)
+   # temp$rbk <- temp$rbk %>% colsplit("(?<=\\p{L})(?=[\\d+$])", c("Type", "Score")) # make 2 columns, type and score, then populate with values
+   # ratingBreakdown <- data.frame(temp) # make a new df containing those columns
+   # ratingBreakdown <- ratingBreakdown$rbk # df has a wrapper around it so get rid of the wrapper
+   # ratingBreakdown$Score <- ratingBreakdown$Score/10 # ratings had no decimals so converted them eg 95 -> 9.5
+   # ratingBreakdown <- ratingBreakdown %>% spread(Type, Score) # pivot the table
    
   if(length(rbk)>0) {
     temp <- data.frame(rbk) # put into temp df
@@ -261,7 +269,7 @@ scrapeHostelInfo <- function(url) {
     ratingBreakdown$Score <- ratingBreakdown$Score/10 # ratings had no decimals so converted them eg 95 -> 9.5
     ratingBreakdown <- ratingBreakdown %>% spread(Type, Score) # pivot the table
   } else {
-    ratingBreakdown <- data.frame(atmosphere=NA, cleanliness=NA,facilities=NA, location=NA,security=NA, staff=NA, valueformoney=NA) 
+    ratingBreakdown <- data.frame(atmosphere=NA, cleanliness=NA,facilities=NA, location=NA,security=NA, staff=NA, valueformoney=NA)
   }
    df <- data.frame(name, ratingOverall, ratingKeyword, totalReviews, ratingBreakdown)
    print(df) # so i can see its doing things :B
@@ -273,6 +281,7 @@ filteredHostels <- scrapedLinksDF %>% filter(scrapedLinksDF$OverallRating > 0.0)
 write.csv(filteredHostels, "filteredHostels.csv")
 
 hostelDataset <- apply(data.frame(filteredHostels$Link),1,scrapeHostelInfo)
+#hostelDataset <- lapply(data.frame(scrapedLinksDF$Link),scrapeHostelInfo)
 hostelDataset <- do.call(rbind.data.frame, hostelDataset)
 
 write.csv(hostelDataset, "hostelDataset.csv")
