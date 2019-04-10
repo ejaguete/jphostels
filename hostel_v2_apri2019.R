@@ -319,4 +319,14 @@ scrapeGeolocation <- function (hostel) {
 #print(scrapeGeolocation("Emblem Hostel Nishiarai"))
 #hostelLocation <- apply(data.frame(hostelDataset$name),1,scrapeGeolocation)
 
+# -------------------------------------- 
+# FUNC: scrape available facilities
+# param: url of hostel
+# returns: df containing hostel name and facilities it provides
+# -------------------------------------- 
+
+scrapeFaciliies <- function(url) {
+  
+}
+
 print("finished scraping ty")
