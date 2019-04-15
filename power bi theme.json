@@ -1,0 +1,17 @@
+{
+  "name": "Erica Aguete - Hostel Theme",
+
+  "dataColors": [
+  "#ff2949",
+  "#f9e9b1",
+  "#fca05a",
+  "#ff824b",
+  "#fabb71",
+  "#f8d38f",
+  "#ff5e46",
+  "#fffdd6"
+  ],
+  "background": "#ffffff",
+  "foreground": "#ff2949",
+  "tableAccent": "#ff2949"
+}
