@@ -14,36 +14,37 @@
 # install and load packages as needed
 pkgNames <- c("dplyr","tidyverse","rvest","reshape2", "ggmap")
 lapply(pkgNames, require, character.only = TRUE)
+accomodation <- "Hotels"
 
 # -------------------------------------- 
 # VAR: homepage for japan hostels
 # -------------------------------------- 
 # used to scrape top 5 cities & their links
-homePage <- read_html("https://www.hostelworld.com/hostels/Japan")
+homePage <- read_html("https://www.hostelworld.com/hotels/Japan")
 
 # --------------------------------------
 # VAR: scrape city names from jpHostelLink
 # -------------------------------------- 
-homePageCityNames <- 
-  homePage %>% 
-  html_nodes("div.contentbackground") %>% 
-  html_nodes("div.small-12") %>% 
-  html_nodes("div.citysection") %>% 
-  html_nodes("div.cityresults_details") %>% 
-  html_nodes("h2") %>% 
-  html_text()
+# homePageCityNames <- 
+#   homePage %>% 
+#   html_nodes("div.contentbackground") %>% 
+#   html_nodes("div.small-12") %>% 
+#   html_nodes("div.citysection") %>% 
+#   html_nodes("div.cityresults_details") %>% 
+#   html_nodes("h2") %>% 
+#   html_text()
 
 # -------------------------------------- 
 # VAR: scrape city links from jpHostelLink
 # -------------------------------------- 
-homePageCityLinks <- 
-  homePage %>% 
-  html_nodes("div.contentbackground") %>% 
-  html_nodes("div.small-12") %>% 
-  html_nodes("div.citysection") %>% 
-  html_nodes("div.cityresults_details") %>% 
-  html_nodes("h2") %>% 
-  html_nodes("a") %>% 
+homePageCityLinks <-
+  homePage %>%
+  html_nodes("div.contentbackground") %>%
+  html_nodes("div.small-12") %>%
+  html_nodes("div.citysection") %>%
+  html_nodes("div.cityresults_details") %>%
+  html_nodes("h2") %>%
+  html_nodes("a") %>%
   html_attr("href")
 
 # -------------------------------------- 
@@ -61,9 +62,9 @@ homePageCityNumHostels <-
 # -------------------------------------- 
 # VAR: store city names, links, hostel num vars in a dataframe
 # -------------------------------------- 
-homePageDF <- data.frame(homePageCityNames, homePageCityLinks, homePageCityNumHostels)
-names(homePageDF) <- c("City", "Link", "Num Hostels")
-write.csv(homePageDF,"homePageDF.csv")
+homePageDF <- data.frame(homePageCityLinks, homePageCityNumHostels)
+names(homePageDF) <- c("Link", "Num Hostels")
+write.csv(homePageDF,paste(accomodation,"homePageDF.csv"))
 
 # -------------------------------------- 
 # FUNC: retrieve pagination links for each city
@@ -85,18 +86,18 @@ getPaginationLink <- function (url) {
 # -------------------------------------- 
 cityPageLinks <- apply(data.frame(homePageDF$Link), 1, getPaginationLink)
 cityPageLinksDF <- data.frame(cityPageLinks %>% unlist())
-cityPageLinksDF$City <- c("Tokyo", "Tokyo", "Tokyo", "Tokyo", "Tokyo",
-                    "Kyoto", "Kyoto", "Kyoto", "Kyoto",
-                    "Osaka", "Osaka", "Osaka", "Osaka",
-                    "Hiroshima", "Fukuoka")
+# cityPageLinksDF$City <- c("Tokyo", "Tokyo", "Tokyo", "Tokyo", "Tokyo",
+#                     "Kyoto", "Kyoto", "Kyoto", "Kyoto",
+#                     "Osaka", "Osaka", "Osaka", "Osaka",
+#                     "Hiroshima", "Fukuoka")
 # column labels
-names(cityPageLinksDF) <- c("Link", "City")
+names(cityPageLinksDF) <- c("Link")
 
 if(debugOn==TRUE) {
   print("cityPgLinksDF contents")
   print(cityPgLinksDF)
 }
-write.csv(cityPageLinksDF,"cityPageLinksDF.csv")
+write.csv(cityPageLinksDF,paste(accomodation,"cityPageLinksDF.csv"))
 
 # -------------------------------------- 
 # FUNC: for each pagination link, scrape hostel names and their links
@@ -190,7 +191,7 @@ scrapedLinks <- apply(data.frame(cityPageLinksDF$Link),1,scrapeHostelLink)
 scrapedLinksDF <- do.call(rbind.data.frame, scrapedLinks)
 names(scrapedLinksDF) <- c("Name", "Link", "OverallRating", "StartingPrice", "DistanceFromCityCentre")
 
-write.csv(scrapedLinksDF,"scrapedLinks.csv")
+write.csv(scrapedLinksDF,paste(accomodation,"scrapedLinks.csv"))
 
 # -------------------------------------- 
 # FUNC: scrape info from individual hostel pages
@@ -199,6 +200,7 @@ write.csv(scrapedLinksDF,"scrapedLinks.csv")
 # -------------------------------------- 
 scrapeHostelInfo <- function(url) {
   link <- read_html(as.character(url))
+  print(url)
   
   name <- 
     link %>% 
@@ -240,6 +242,18 @@ scrapeHostelInfo <- function(url) {
      html_nodes("a.counter") %>%
      html_nodes("span") %>%
      html_text()
+   
+   address <- 
+     link %>% 
+     html_nodes("div.ms-content") %>% 
+     html_nodes('[name=ms-hero]') %>% 
+     html_nodes("div.jumbotron") %>% 
+     html_nodes("div.row") %>% 
+     html_nodes("div.small-12") %>% 
+     html_nodes("div.content") %>% 
+     html_nodes("div.address-line") %>% 
+     html_nodes("a.map_link") %>% 
+     html_text()
 
    rbk <-
      link %>%
@@ -249,15 +263,6 @@ scrapeHostelInfo <- function(url) {
      html_nodes("li.small-12") %>%
      html_nodes("p.rating-label") %>%
      html_text(trim=TRUE) %>% replace(!nzchar(.),NA)
-   
-   # temp <- data.frame(rbk) # put into temp df
-   # temp$rbk <- as.character(temp$rbk) # convert everything to text
-   # temp$rbk <- temp$rbk %>% str_remove("\\.") %>% str_to_lower() %>% str_remove_all(" ") # make values a long string (will fix later)
-   # temp$rbk <- temp$rbk %>% colsplit("(?<=\\p{L})(?=[\\d+$])", c("Type", "Score")) # make 2 columns, type and score, then populate with values
-   # ratingBreakdown <- data.frame(temp) # make a new df containing those columns
-   # ratingBreakdown <- ratingBreakdown$rbk # df has a wrapper around it so get rid of the wrapper
-   # ratingBreakdown$Score <- ratingBreakdown$Score/10 # ratings had no decimals so converted them eg 95 -> 9.5
-   # ratingBreakdown <- ratingBreakdown %>% spread(Type, Score) # pivot the table
    
   if(length(rbk)>0) {
     temp <- data.frame(rbk) # put into temp df
@@ -271,7 +276,7 @@ scrapeHostelInfo <- function(url) {
   } else {
     ratingBreakdown <- data.frame(atmosphere=NA, cleanliness=NA,facilities=NA, location=NA,security=NA, staff=NA, valueformoney=NA)
   }
-   df <- data.frame(name, ratingOverall, ratingKeyword, totalReviews, ratingBreakdown)
+   df <- data.frame(name, ratingOverall, ratingKeyword, totalReviews, ratingBreakdown, address)
    print(df) # so i can see its doing things :B
    return(df)
 }
@@ -284,7 +289,7 @@ hostelDataset <- apply(data.frame(filteredHostels$Link),1,scrapeHostelInfo)
 #hostelDataset <- lapply(data.frame(scrapedLinksDF$Link),scrapeHostelInfo)
 hostelDataset <- do.call(rbind.data.frame, hostelDataset)
 
-write.csv(hostelDataset, "hostelDataset.csv")
+write.csv(hostelDataset, paste(accomodation,"hostelDataset.csv"))
 
 # -------------------------------------- 
 # FUNC: scrape individual reviews from each hostel in filteredHostels
@@ -309,11 +314,11 @@ scrapeReviews <- function (url) {
 #print(scrapeReviews("https://www.hostelworld.com/hosteldetails.php/Emblem-Hostel-Nishiarai/Tokyo/102785"))
 
 # grab geolocations of hostels
-scrapeGeolocation <- function (hostel) {
-  hostel <- as.character(hostel)
-  
-  data.frame(hostel, data.frame(geocode(hostel)))
-}
+# scrapeGeolocation <- function (hostel) {
+#   hostel <- as.character(hostel)
+#   
+#   data.frame(hostel, data.frame(geocode(hostel)))
+# }
 
 # i cant scrape geolocation until i get a google api :)) so no
 #print(scrapeGeolocation("Emblem Hostel Nishiarai"))
@@ -324,9 +329,9 @@ scrapeGeolocation <- function (hostel) {
 # param: url of hostel
 # returns: df containing hostel name and facilities it provides
 # -------------------------------------- 
-
-scrapeFaciliies <- function(url) {
-  
-}
+# 
+# scrapeFaciliies <- function(url) {
+#   
+# }
 
 print("finished scraping ty")
